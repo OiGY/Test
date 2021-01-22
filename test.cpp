@@ -11,23 +11,56 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <iostream>
+#include <iomanip>
+#include <regex>
+#include <tuple>
+#include <math.h>
 //#include "stdafx.h"
 //#include "pch.h"
 #include <regex>
 #include <locale>
-
+#include <functional>
+#include "rapidjson/document.h"
+#include "rapidjson/writer.h"
+#include "rapidjson/reader.h"
+#include "rapidjson/stringbuffer.h"
+#include "customlinkedlist.h"
+//#include "environment.h"
 
 
 using namespace std;
+using namespace rapidjson;
+typedef int size_t;
 
-#define Num 5
+//#define Num 5
+
 struct WORKER
 {
-	char NAME[80];
-	char POS[20];
-	int YEAR;
+	string NAME[80];
+	string POS[20];
+    int YEAR;
+    
 };
-WORKER TABL[Num];
+//WORKER TABL[Num];
+
+struct Stream {
+    std::ofstream of{ "/tmp/example.json" };
+    typedef char Ch;
+    void Put(Ch ch) { of.put(ch); }
+    void Flush() {}
+} stream;
+enum class ERRORS
+{
+    NO_ERROR = 1,
+
+    OBJ_EMPTY = -1,
+    INVALID_ARGUMENT = -2,
+
+    JSON_PART_BROKEN = -10,
+
+    FILE_OPEN_ERROR = -20,
+};
 
 void ShowMenu()
 {
@@ -40,6 +73,32 @@ void ShowMenu()
         << "\n 6.Загрузить из файла"
         << "\n 0.Выход"
         << endl;
+}
+string GetStringValue()
+{
+    bool bFirst = true;
+    std::string strValue;
+
+    do
+    {
+        if (bFirst)
+        {
+            bFirst = false;
+        }
+        else
+        {
+            std::cin.clear();
+
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+
+            std::cout << "Неправельный ввод. Значяение должно быть строкой g.\n";
+        }
+
+        std::cin >> strValue;
+
+    } while (!std::cin.good());
+
+    return strValue;
 }
 int GetIntValue()
 {
@@ -76,32 +135,7 @@ int GetIntValue()
 
     return iValue;
 }
-string GetStringValue()
-{
-    bool bFirst = true;
-    std::string strValue;
 
-    do
-    {
-        if (bFirst)
-        {
-            bFirst = false;
-        }
-        else
-        {
-            std::cin.clear();
-
-            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-
-            std::cout << "Неправельный ввод. Значяение должно быть строкой g.\n";
-        }
-
-        std::cin >> strValue;
-
-    } while (!std::cin.good());
-
-    return strValue;
-}
 void PressToContinue()
 {
     std::cout << "\nДля прододжения ,нажмите любую кнопку..."
@@ -111,10 +145,15 @@ void PressToContinue()
     std::cin.get();
 }
 
-
 int main() {
 
+    typedef int size_t;
+
+    LinkedList<WORKER>* pWorkers = new LinkedList<WORKER>();
+
+    
     setlocale(LC_ALL, "Russian");
+
     size_t nCommand = 1;
 
 
@@ -135,12 +174,13 @@ int main() {
         case 1:
         {
             std::cout << "Добавить работников\n\n";
-
+            const WORKER worker = EnterFlight();
 
         }
         break;
         case 2:
         {
+            void EditWorker();
             std::cout << "Редактирование работников\n\n";
 
             std::cout << "Поиск работников:\n";
@@ -164,13 +204,13 @@ int main() {
         break;
 
 
-        case 7:
+        case 5:
         {
             std::cout << "Сохранить в фаил\n\n";
 
         }
         break;
-        case 8:
+        case 6:
         {
             std::cout << "Загрузить из файла\n\n";
 
@@ -191,90 +231,148 @@ int main() {
     return 0;
  
 }
+bool CheckName(const std::string& NAME)
+{
+    const std::regex airRegex("[A-Za-z]");
+
+    return regex_match(NAME, airRegex);
+}
+bool CheckYear(const int& Year)
+{
+    if (Year < 0); {
+        return false;
+    }
+    
+    return Year;
+
+   
+}
+WORKER AddWorker()
+{
+    WORKER workers;
+
+    string strTemp;
+    bool bFirst = true;
+
+    cout << "Введите ФИО: ";
+    do
+    {
+        if (bFirst)
+        {
+            bFirst = false;
+        }
+        else
+        {
+            cout << "Только буквы" << std::endl;
+        }
+
+        strTemp = GetStringValue();
+    } while (!CheckName(strTemp));
+
+    workers.NAME = strTemp;
+
+
+    bFirst = true;
+    std::cout << "Должность: ";
+    do
+    {
+        if (bFirst)
+        {
+            bFirst = false;
+        }
+        else
+        {
+            std::cout << "Только буквы" << std::endl;
+        }
+
+        strTemp = GetStringValue();
+    } while (!CheckName(strTemp));
+
+    workers.POS = strTemp;
+
+
+    int iNumber = 0;
+    bFirst = true;
+    std::cout << "Стаж работы: ";
+    do
+    {
+        if (bFirst)
+        {
+            bFirst = false;
+        }
+        else
+        {
+            std::cout << "от 0 до 99" << std::endl;
+        }
+
+        iNumber = GetIntValue();
+    } while (!CheckYear(iNumber));
+
+    workers.YEAR = iNumber;
+
+
+    return workers;
+}
 /*
-void ShowMenu()
+class JsonArray;
+ERRORS SaveToFile(const JsonArray& jArr, const string& strName)
 {
-   cout << " Меню:"
-        << "\n 1.Список работников"
-        << "\n 2.Редактирование работников"
-        << "\n 3.Удаление работников"
-        << "\n 4.Поиск работников"
-        << "\n 5.Сохранить в фаил"
-        << "\n 6.Загрузить из файла"
-        << "\n 0.Выход"
-        << endl;
-}
-int GetIntValue()
-{
-    bool bFirst = true;
-
-    bool bCheck = false;
-
-    const regex regex("(\\+|-)?[[:digit:]]+");
-
-    string strValue;
-
-    do
+    if (jArr.empty() || strName.empty())
     {
-        if (bFirst)
-        {
-            bFirst = false;
-        }
-        else
-        {
-            cin.clear();
+        return ERRORS::INVALID_ARGUMENT;
+    }
 
-            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    const QString strFileName = QString::fromStdString(strName);
+    QFile saveFile(strFileName);
 
-            cout << "Invalid input. Значение должно быть целым." << endl;
-        }
-
-        strValue = GetStringValue();
-
-        bCheck = regex_match(strValue, regex);
-
-    } while (!bCheck);
-
-    int iValue = atoi(strValue.c_str());
-
-    return iValue;
-}
-string GetStringValue()
-{
-    bool bFirst = true;
-    std::string strValue;
-
-    do
+    if (!saveFile.open(QIODevice::WriteOnly))
     {
-        if (bFirst)
-        {
-            bFirst = false;
-        }
-        else
-        {
-            std::cin.clear();
+        return ERRORS::FILE_OPEN_ERROR;
+    }
 
-            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+    QJsonDocument saveDoc(jArr);
+    saveFile.write(saveDoc.toJson());
 
-            std::cout << "Неправельный ввод. Значяение должно быть строкой g.\n";
-        }
-
-        std::cin >> strValue;
-
-    } while (!std::cin.good());
-
-    return strValue;
+    return ERRORS::NO_ERROR;
 }
-void PressToContinue()
+
+QJsonArray LoadFromFile(const std::string& strName, ERRORS* pError)
 {
-    std::cout << "\nДля прододжения ,нажмите любую кнопку..."
-        << std::endl;
+    if (strName.empty())
+    {
+        if (pError != nullptr)
+        {
+            *pError = ERRORS::INVALID_ARGUMENT;
+        }
 
-    std::cin.get();
-    std::cin.get();
+        return {};
+    }
+
+    const QString strFileName = QString::fromStdString(strName);
+    QFile loadFile(strFileName);
+
+    if (!loadFile.open(QIODevice::ReadOnly))
+    {
+        if (pError != nullptr)
+        {
+            *pError = ERRORS::FILE_OPEN_ERROR;
+        }
+
+        return {};
+    }
+
+    QByteArray arrData = loadFile.readAll();
+
+    QJsonDocument loadDoc = QJsonDocument::fromJson(arrData);
+
+    if (pError != nullptr)
+    {
+        *pError = ERRORS::NO_ERROR;
+    }
+
+    return loadDoc.array();
 }
 
-*/
 
 /*
 void prog()
@@ -365,5 +463,5 @@ AskYear: cin>>Year; system("cls"); //Ввод года и очистка кон�
 	if (flag == false) cout<<"Работников со стажем не найдено.\n\n";//Вывод сообщения (сотрудников со стажем не найдено)
 	system("pause");
 }
-
 */
+
